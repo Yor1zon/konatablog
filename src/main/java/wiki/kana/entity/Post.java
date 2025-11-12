@@ -97,6 +97,25 @@ public class Post {
     private User author;
 
     /**
+     * 博客头图 - 一对一关系
+     */
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "banner_media_id")
+    private Media bannerImage;
+
+    /**
+     * 博客中的所有媒体文件 - 多对多关系
+     */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "post_media",
+        joinColumns = @JoinColumn(name = "post_id"),
+        inverseJoinColumns = @JoinColumn(name = "media_id")
+    )
+    @Builder.Default
+    private List<Media> mediaFiles = new ArrayList<>();
+
+    /**
      * 发布时间 - 草稿为null
      */
     @Column(name = "published_at")
@@ -169,6 +188,57 @@ public class Post {
         if (tag != null && this.tags != null) {
             this.tags.remove(tag);
         }
+    }
+
+    /**
+     * 设置博客头图
+     */
+    public void setBannerImage(Media bannerImage) {
+        this.bannerImage = bannerImage;
+    }
+
+    /**
+     * 获取博客头图URL
+     */
+    public String getBannerImageUrl() {
+        return this.bannerImage != null ? this.bannerImage.getUrl() : null;
+    }
+
+    /**
+     * 添加媒体文件到博客
+     */
+    public void addMediaFile(Media media) {
+        if (media != null && this.mediaFiles != null && !this.mediaFiles.contains(media)) {
+            this.mediaFiles.add(media);
+        }
+    }
+
+    /**
+     * 移除媒体文件
+     */
+    public void removeMediaFile(Media media) {
+        if (media != null && this.mediaFiles != null) {
+            this.mediaFiles.remove(media);
+        }
+    }
+
+    /**
+     * 获取博客中的图片文件
+     */
+    public List<Media> getImageFiles() {
+        if (this.mediaFiles == null) {
+            return new ArrayList<>();
+        }
+        return this.mediaFiles.stream()
+                .filter(Media::isImage)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 检查博客是否包含指定媒体文件
+     */
+    public boolean containsMedia(Media media) {
+        return this.mediaFiles != null && this.mediaFiles.contains(media);
     }
 
     /**

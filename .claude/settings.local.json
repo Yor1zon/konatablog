@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(./mvnw clean compile)",
+      "Bash(./mvnw spring-boot:run)",
+      "Bash(netstat -tlnp)"
     ],
     "deny": [],
     "ask": []
