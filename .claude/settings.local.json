@@ -4,7 +4,12 @@
       "Bash(mkdir:*)",
       "Bash(./mvnw clean compile)",
       "Bash(./mvnw spring-boot:run)",
-      "Bash(netstat -tlnp)"
+      "Bash(netstat -tlnp)",
+      "Bash(./mvnw --version)",
+      "Bash(./mvnw clean compile -q)",
+      "Bash(./mvnw test -Dtest=KonatablogApplicationTests)",
+      "Bash(./mvnw test -Dtest=UserServiceTest)",
+      "Bash(./mvnw test -Dtest=UserServiceTest -q)"
     ],
     "deny": [],
     "ask": []

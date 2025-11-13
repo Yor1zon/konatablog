@@ -4,14 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**KONATABLOG** is a personal blog system built with Spring Boot. This is a fresh, greenfield project focused on creating a lightweight, full-featured blogging platform with markdown support, theme customization, and image hosting capabilities.
+**KONATABLOG** is a personal blog system built with Spring Boot. This is a lightweight, full-featured blogging platform with markdown support, theme customization, and image hosting capabilities.
 
 - **Type**: Spring Boot 3.5.7 application
 - **Language**: Java 17
 - **Build Tool**: Maven
 - **Package**: `wiki.kana`
-- **Development Timeline**: 2-3 weeks
+- **Database**: SQLite (file: `data/konatablog.db`)
 - **Architecture**: Backend API (future frontend will be separate)
+- **Status**: Repository & Entity layers complete, UserService complete, implementing remaining service layer
 
 ## Common Commands
 
@@ -75,6 +76,31 @@ sqlite3 data/konatablog.db ".tables"
 cp data/konatablog.db data/konatablog.db.backup
 ```
 
+## Verified Development Commands
+
+All commands below have been tested and work correctly:
+
+**Build & Test**:
+```bash
+./mvnw clean compile                    # ✅ Compiles successfully
+./mvnw test                            # ✅ All tests pass
+./mvnw test -Dtest=KonatablogApplicationTests  # ✅ Basic context test passes
+```
+
+**Run Application**:
+```bash
+./mvnw spring-boot:run                 # ✅ Starts on port 8081
+# Database auto-creates at data/konatablog.db
+```
+
+**Database Operations**:
+```bash
+sqlite3 data/konatablog.db ".schema"   # View current schema
+sqlite3 data/konatablog.db ".tables"   # List all tables
+```
+
+Note: Schema migration warnings are expected due to SQLite limitations.
+
 ## Project Structure
 
 This is a standard Spring Boot Maven project with the following structure:
@@ -84,7 +110,9 @@ src/
 ├── main/
 │   ├── java/wiki/kana/
 │   │   ├── KonatablogApplication.java     # Main Spring Boot application
-│   │   ├── entity/                        # JPA Entity classes
+│   │   ├── config/                        # Configuration classes
+│   │   │   └── SecurityConfig.java        # Spring Security configuration
+│   │   ├── entity/                        # JPA Entity classes ✅ COMPLETE
 │   │   │   ├── User.java
 │   │   │   ├── Post.java
 │   │   │   ├── Category.java
@@ -92,9 +120,18 @@ src/
 │   │   │   ├── Media.java
 │   │   │   ├── Themes.java
 │   │   │   └── Settings.java
-│   │   ├── repository/                    # Data access layer
-│   │   │   └── MediaRepository.java
-│   │   └── [planned] service/, controller/, dto/, config/
+│   │   ├── repository/                    # Data access layer ✅ COMPLETE
+│   │   │   ├── UserRepository.java
+│   │   │   ├── PostRepository.java
+│   │   │   ├── CategoryRepository.java
+│   │   │   ├── TagRepository.java
+│   │   │   ├── MediaRepository.java
+│   │   │   ├── SettingsRepository.java
+│   │   │   └── ThemesRepository.java
+│   │   ├── service/                       # Business logic layer 🔄 IN PROGRESS
+│   │   └── exception/                     # Custom exceptions
+│   │       ├── ResourceNotFoundException.java
+│   │       └── DuplicateResourceException.java
 │   ├── resources/
 │   │   ├── application.properties         # Application configuration
 │   │   ├── static/                        # Static assets
@@ -113,27 +150,34 @@ pom.xml                                    # Maven dependencies
 ## Architecture
 
 ### Current State
-The project has completed **initial foundation work**:
+The project has completed **foundation and data access layers**:
 - ✅ Spring Boot starter setup with all core dependencies
-- ✅ SQLite database configuration
+- ✅ SQLite database configuration and connection
 - ✅ JPA/Hibernate with SQLite dialect configured
 - ✅ All entity models created (User, Post, Category, Tag, Media, Settings, Themes)
-- ✅ MediaRepository implementation
+- ✅ Complete repository layer (all 7 repositories implemented)
+- ✅ Security configuration (BCrypt password encoding)
+- ✅ Custom exception classes
 - 🔄 Service layer implementation (in progress)
 - 🔄 REST API endpoints (planned)
-- 🔄 Authentication system (planned)
+- 🔄 JWT authentication system (dependencies ready)
 
 ### Architecture Layers
 
 **Current Implementation**:
-- **Entity Layer** (`src/main/java/wiki/kana/entity/`): JPA entities ✅
-- **Repository Layer** (`src/main/java/wiki/kana/repository/`): Data access (MediaRepository ✅, others pending)
+- **Entity Layer** (`src/main/java/wiki/kana/entity/`): JPA entities ✅ COMPLETE
+- **Repository Layer** (`src/main/java/wiki/kana/repository/`): Data access ✅ COMPLETE
+- **Config Layer** (`src/main/java/wiki/kana/config/`): Security configuration ✅ COMPLETE
+- **Exception Layer** (`src/main/java/wiki/kana/exception/`): Custom exceptions ✅ COMPLETE
+
+**In Progress**:
+- **Service Layer** (`src/main/java/wiki/kana/service/`): Business logic 🔄 PARTIAL
+  - ✅ UserService: Complete with full CRUD, authentication, and statistics
+  - 🔄 PostService, CategoryService, TagService, MediaService, SettingsService, ThemesService: TODO
 
 **Planned Layers**:
-- **Service Layer** (`src/main/java/wiki/kana/service/`): Business logic
 - **Controller Layer** (`src/main/java/wiki/kana/controller/`): REST API endpoints
 - **DTO Layer** (`src/main/java/wiki/kana/dto/`): Data transfer objects
-- **Config Layer** (`src/main/java/wiki/kana/config/`): Security, CORS, etc.
 
 **Core Entities** (all created):
 - `User.java` - Authentication & authorization
@@ -153,25 +197,35 @@ The project has completed **initial foundation work**:
 
 ## Development Status
 
-**Current Phase**: Entity & Repository Layer Complete
+**Current Phase**: UserService Complete, Implementing Remaining Service Layer
 - ✅ Add database dependencies (SQLite + JPA)
 - ✅ Configure database connection
 - ✅ Create entity models (all 7 entities)
-- ✅ MediaRepository implementation
-- 🔄 Complete repository layer (UserRepository, PostRepository, etc.)
-- 🔄 Service layer implementation
+- ✅ Complete repository layer (all 7 repositories implemented)
+- ✅ Security configuration (BCrypt password encoder)
+- ✅ Custom exception classes
+- ✅ UserService implementation (complete with CRUD, auth, statistics)
+- 🔄 Service layer completion (PostService, CategoryService, TagService, MediaService, SettingsService, ThemesService)
 - 🔄 REST API endpoints
-- 🔄 Authentication system (JWT)
+- 🔄 JWT authentication system
 - 🔄 Blog CRUD operations
 
 **Next Steps Priority**:
-1. Complete repository layer for all entities
-2. Implement service layer (UserService, PostService, MediaService, etc.)
+1. ✅ Complete repository layer for all entities
+2. 🔄 Complete service layer (PostService, CategoryService, TagService, MediaService, SettingsService, ThemesService)
 3. Build REST API endpoints
 4. JWT-based authentication system
 5. Frontend integration (separate repository)
 6. Image upload functionality
 7. Theme management
+
+## Database Schema Migration Notes
+
+**SQLite Constraint Limitation**:
+- SQLite does not support adding UNIQUE columns via ALTER TABLE
+- When modifying entity relationships, you may see warnings like: `Cannot add a UNIQUE column`
+- **Solution**: Delete `data/konatablog.db` and restart the application to recreate the schema cleanly
+- Current schema migration attempts to handle this gracefully but may log warnings during tests
 
 ## Configuration Notes
 
@@ -246,9 +300,11 @@ spring.jpa.properties.hibernate.format_sql=true
 2. Run `./mvnw clean compile` to verify setup and dependencies
 3. Database is already configured - start the app to auto-create tables
 4. Entity models are already created in `src/main/java/wiki/kana/entity/`
-5. Build out remaining repositories (UserRepository, PostRepository, etc.)
-6. Implement service layer
-7. Create REST controllers
+5. All repositories are implemented in `src/main/java/wiki/kana/repository/`
+6. Security configuration is set up in `src/main/java/wiki/kana/config/`
+7. **Next**: Implement service layer (start with UserService, PostService)
+8. **Then**: Create REST controllers
+9. **Finally**: Set up JWT authentication
 
 ## Key Files
 
@@ -268,15 +324,28 @@ spring.jpa.properties.hibernate.format_sql=true
 - `entity/Settings.java`: Blog configuration
 - `entity/Themes.java`: Theme customization
 
-**Repository Layer**:
-- `repository/MediaRepository.java`: Media data access (implemented)
+**Repository Layer** (✅ COMPLETE):
+- `repository/UserRepository.java`: User data access with custom queries
+- `repository/PostRepository.java`: Blog post data access
+- `repository/CategoryRepository.java`: Category data access
+- `repository/TagRepository.java`: Tag data access
+- `repository/MediaRepository.java`: Media file data access
+- `repository/SettingsRepository.java`: Settings data access
+- `repository/ThemesRepository.java`: Themes data access
+
+**Security & Configuration**:
+- `config/SecurityConfig.java`: Spring Security configuration (BCrypt password encoder)
+
+**Exception Handling**:
+- `exception/ResourceNotFoundException.java`: Custom exception for missing resources
+- `exception/DuplicateResourceException.java`: Custom exception for duplicate resources
 
 **Documentation**:
 - `docs/需求文档.md`: Full feature requirements (Chinese)
 
 **Other**:
 - `.gitignore`: IDE and build tool exclusions
-- `data/`: SQLite database directory
+- `data/`: SQLite database directory (contains `konatablog.db`)
 
 ## Entity Relationship Overview
 
@@ -291,11 +360,77 @@ spring.jpa.properties.hibernate.format_sql=true
 
 All entities use JPA annotations and Lombok for reduced boilerplate code.
 
+## Repository Layer Implementation Details
+
+**UserRepository Features**:
+- Standard CRUD operations via JpaRepository
+- Custom queries: findByUsername, findByEmail, findByUsernameOrEmail
+- Role-based queries: findByRole, findByIsActiveTrue
+- Statistics queries: countAllUsers, countByRole
+- Advanced queries: findRecentLoginUsers, findActiveAuthors
+
+**PostRepository Features**:
+- CRUD operations for blog posts
+- Custom queries for published posts, posts by category/author
+- Search functionality by title and content
+- Pagination support for post listings
+- View count tracking
+
+**Other Repositories**:
+- CategoryRepository: CRUD with hierarchical structure support
+- TagRepository: Many-to-many relationship handling
+- MediaRepository: File upload and management
+- SettingsRepository: Key-value configuration storage
+- ThemesRepository: Theme configuration management
+
+## Service Layer Implementation Status
+
+**Current Implementation Progress**:
+
+- ✅ **UserService** (442 lines): Fully implemented
+  - Complete CRUD operations with validation
+  - BCrypt password encoding
+  - Authentication methods (username/email login)
+  - User activation/deactivation and role management
+  - Statistics queries (count users, recent logins, active authors)
+  - Custom validation and exception handling
+  - Comprehensive logging with SLF4J
+
+- 🔄 **Remaining Services** (Need Implementation):
+  - **PostService**: Blog post publishing workflow, search, view count tracking
+  - **CategoryService**: Category CRUD with hierarchical structure support
+  - **TagService**: Tag management and many-to-many post associations
+  - **MediaService**: File upload validation, storage, URL generation
+  - **SettingsService**: Key-value configuration management
+  - **ThemesService**: Theme switching and customization
+
+## Testing Strategy
+
+**Verified Working Tests**:
+- Context loading test: `./mvnw test -Dtest=KonatablogApplicationTests`
+- All 7 repositories are auto-configured and available for testing
+- SQLite database connection tested and working
+- 7 JPA repository interfaces detected during startup
+
+**Next Testing Priorities**:
+1. Add service layer unit tests (start with UserServiceTest)
+2. Test repository custom queries with actual data
+3. Integration tests with database operations
+4. Test exception handling scenarios (ResourceNotFoundException, DuplicateResourceException)
+5. Test authentication and authorization flows
+
+**Test Database**: Tests use the same SQLite database at `data/konatablog.db`
+- Current tests create tables but don't interfere with existing data
+- Schema migration warnings are expected (SQLite ALTER TABLE limitations)
+- Consider using separate test profile for test database isolation
+
 ## Development Approach
 
+**Current Status**: ✅ Repository Layer Complete, ✅ UserService Complete
+
 **Recommended Flow**:
-1. **Complete repository layer**: Create repositories for all entities except MediaRepository
-2. **Service layer**: Implement business logic in service classes
+1. ✅ **Complete repository layer**: All repositories implemented with custom queries
+2. 🔄 **Complete service layer**: Implement remaining business logic services
 3. **Controller layer**: Build REST API endpoints
 4. **Authentication**: Integrate JWT-based security
 5. **Test first**: Add tests alongside new features
@@ -303,9 +438,82 @@ All entities use JPA annotations and Lombok for reduced boilerplate code.
 7. **Small PRs**: Keep changes small and focused
 
 **Validation Steps**:
-1. Run `./mvnw clean compile` - verify no compilation errors
-2. Run `./mvnw spring-boot:run` - verify SQLite connection and table creation
-3. Check `data/konatablog.db` is created
+1. Run `./mvnw clean compile` - verify no compilation errors ✅
+2. Run `./mvnw spring-boot:run` - verify SQLite connection and table creation ✅
+3. Check `data/konatablog.db` is created ✅
 4. Verify JPA schema matches entities (check logs for DDL statements)
+5. Test repository methods with sample data
+6. Run `./mvnw test -Dtest=KonatablogApplicationTests` - verify basic context loads ✅
 
-This is a **growing project** - entities and repositories are in place, ready for service and controller implementation.
+This is a **growing project** - entities, repositories, security configuration, and UserService are complete, ready for remaining service and controller implementation.
+
+## Service Layer Implementation Guidelines
+
+**Service Layer Structure** (🔄 IN PROGRESS):
+```
+src/main/java/wiki/kana/service/
+├── UserService.java          # User management & authentication
+├── PostService.java          # Blog post business logic
+├── CategoryService.java      # Category management
+├── TagService.java           # Tag management
+├── MediaService.java         # File upload & media management
+├── SettingsService.java      # System configuration
+└── ThemesService.java        # Theme management
+```
+
+**Service Implementation Patterns**:
+
+1. **Dependency Injection**: Inject repositories and other services
+   ```java
+   @Service
+   @RequiredArgsConstructor
+   public class UserService {
+       private final UserRepository userRepository;
+       private final PasswordEncoder passwordEncoder;
+   }
+   ```
+
+2. **Exception Handling**: Use custom exceptions from `wiki.kana.exception`
+   ```java
+   public User findById(Long id) {
+       return userRepository.findById(id)
+           .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+   }
+   ```
+
+3. **Data Validation**: Validate inputs using `@Valid` and custom validators
+   ```java
+   public User createUser(CreateUserRequest request) {
+       // Validate request
+       if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+           throw new DuplicateResourceException("Username already exists");
+       }
+   }
+   ```
+
+4. **Business Logic**: Implement complex operations combining multiple repositories
+   ```java
+   public Post publishPost(Long postId, Long userId) {
+       User author = userService.findById(userId);
+       Post post = postRepository.findById(postId)
+           .filter(p -> p.getAuthor().equals(author))
+           .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+
+       post.setStatus(PostStatus.PUBLISHED);
+       post.setPublishedAt(LocalDateTime.now());
+       return postRepository.save(post);
+   }
+   ```
+
+**Service Responsibilities**:
+- **UserService**: Authentication, password encoding, user CRUD
+- **PostService**: Blog post management, publishing workflow, search
+- **MediaService**: File upload validation, storage, URL generation
+- **SettingsService**: System configuration management
+- **ThemesService**: Theme switching and customization
+
+**Testing Strategy**:
+- Unit tests for each service method
+- Integration tests with repositories
+- Mock external dependencies (file storage, email service)
+- Test exception scenarios and edge cases
