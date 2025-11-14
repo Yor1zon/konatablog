@@ -9,7 +9,16 @@
       "Bash(./mvnw clean compile -q)",
       "Bash(./mvnw test -Dtest=KonatablogApplicationTests)",
       "Bash(./mvnw test -Dtest=UserServiceTest)",
-      "Bash(./mvnw test -Dtest=UserServiceTest -q)"
+      "Bash(./mvnw test -Dtest=UserServiceTest -q)",
+      "Bash(./mvnw -v)",
+      "Bash(javac -version)",
+      "Bash(./mvnw test -Dtest=PostServiceTest)",
+      "Bash(cat -n)",
+      "Bash(cat -A src/test/java/wiki/kana/service/PostServiceTest.java)",
+      "Bash(find . -name \"*.java\" -path \"*/test/*\" -exec stat -c \"%y %n\" {})",
+      "Bash(cat src/test/java/wiki/kana/service/PostServiceTest.java)",
+      "Bash(./mvnw -B -Dfile.encoding=* compile -X)",
+      "Bash(./mvnw test -Dtest=PostServiceTest -q)"
     ],
     "deny": [],
     "ask": []

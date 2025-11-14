@@ -1,9 +1,12 @@
 package wiki.kana.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import wiki.kana.entity.Category;
 import wiki.kana.entity.Post;
 import wiki.kana.entity.Tag;
 import wiki.kana.entity.User;
@@ -46,9 +49,19 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findByAuthor(User author);
 
     /**
+     * 根据作者分页查找博客
+     */
+    Page<Post> findByAuthor(User author, Pageable pageable);
+
+    /**
      * 根据分类查找博客
      */
     List<Post> findByCategory(wiki.kana.entity.Category category);
+
+    /**
+     * 根据分类分页查找博客
+     */
+    Page<Post> findByCategory(Category category, Pageable pageable);
 
     /**
      * 根据标签查找博客
@@ -99,10 +112,20 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     long countPublishedPosts();
 
     /**
+     * 统计指定状态博客数量
+     */
+    long countByStatus(Post.PostStatus status);
+
+    /**
      * 统计指定作者的博客数量
      */
     @Query("SELECT COUNT(p) FROM Post p WHERE p.author = :author AND p.status = 'PUBLISHED'")
     long countPublishedPostsByAuthor(@Param("author") User author);
+
+    /**
+     * 统计作者的全部博客数量
+     */
+    long countByAuthor(User author);
 
     /**
      * 查找指定时间范围内的博客
