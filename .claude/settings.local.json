@@ -18,7 +18,13 @@
       "Bash(find . -name \"*.java\" -path \"*/test/*\" -exec stat -c \"%y %n\" {})",
       "Bash(cat src/test/java/wiki/kana/service/PostServiceTest.java)",
       "Bash(./mvnw -B -Dfile.encoding=* compile -X)",
-      "Bash(./mvnw test -Dtest=PostServiceTest -q)"
+      "Bash(./mvnw test -Dtest=PostServiceTest -q)",
+      "Bash(./mvnw test -Dtest=CategoryServiceTest)",
+      "Bash(find target/surefire-reports -name \"*CategoryService*\" -type f -exec cat {} ;)",
+      "Bash(sqlite3 data/konatablog.db \".tables\")",
+      "Bash(sqlite3 data/konatablog.db \".schema\")",
+      "Bash(./mvnw test -Dtest=CategoryServiceTest -q)",
+      "Bash(sqlite3 data/konatablog.db \"SELECT * FROM categories;\")"
     ],
     "deny": [],
     "ask": []
