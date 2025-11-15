@@ -1,4 +1,4 @@
-package wiki.kana.service;
+package wiki.kana.serviceUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +12,7 @@ import wiki.kana.entity.Post;
 import wiki.kana.entity.User;
 import wiki.kana.repository.PostRepository;
 import wiki.kana.repository.UserRepository;
+import wiki.kana.service.PostService;
 
 import java.util.List;
 

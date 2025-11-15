@@ -1,4 +1,4 @@
-package wiki.kana.service;
+package wiki.kana.serviceUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +11,7 @@ import wiki.kana.entity.Category;
 import wiki.kana.exception.DuplicateResourceException;
 import wiki.kana.exception.ResourceNotFoundException;
 import wiki.kana.repository.CategoryRepository;
+import wiki.kana.service.CategoryService;
 
 import java.util.List;
 import java.util.Optional;

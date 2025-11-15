@@ -197,7 +197,7 @@ The project has completed **foundation and data access layers**:
 
 ## Development Status
 
-**Current Phase**: UserService Complete, Implementing Remaining Service Layer
+**Current Phase**: Service Layer Partially Complete (4/7 services implemented)
 - ✅ Add database dependencies (SQLite + JPA)
 - ✅ Configure database connection
 - ✅ Create entity models (all 7 entities)
@@ -205,14 +205,17 @@ The project has completed **foundation and data access layers**:
 - ✅ Security configuration (BCrypt password encoder)
 - ✅ Custom exception classes
 - ✅ UserService implementation (complete with CRUD, auth, statistics)
-- 🔄 Service layer completion (PostService, CategoryService, TagService, MediaService, SettingsService, ThemesService)
+- ✅ PostService implementation (complete with publishing, search, view count tracking)
+- ✅ CategoryService implementation (complete with hierarchical structure support)
+- ✅ TagService implementation (complete with CRUD, statistics, search, recommendations)
+- 🔄 Service layer completion (MediaService, SettingsService, ThemesService remaining)
 - 🔄 REST API endpoints
 - 🔄 JWT authentication system
 - 🔄 Blog CRUD operations
 
 **Next Steps Priority**:
 1. ✅ Complete repository layer for all entities
-2. 🔄 Complete service layer (PostService, CategoryService, TagService, MediaService, SettingsService, ThemesService)
+2. 🔄 Complete service layer (MediaService, SettingsService, ThemesService remaining - 3/7 services)
 3. Build REST API endpoints
 4. JWT-based authentication system
 5. Frontend integration (separate repository)
@@ -396,10 +399,39 @@ All entities use JPA annotations and Lombok for reduced boilerplate code.
   - Custom validation and exception handling
   - Comprehensive logging with SLF4J
 
+- ✅ **PostService** (369 lines): Fully implemented
+  - Complete CRUD operations for blog posts
+  - Publishing workflow (publish/unpublish)
+  - Search functionality (title, content, author, category)
+  - Tag processing and management integration
+  - View count tracking and popular posts
+  - Slug generation and URL-friendly titles
+  - Statistics queries (total, published, draft counts)
+  - Comprehensive logging with SLF4J
+
+- ✅ **CategoryService** (361 lines): Fully implemented
+  - Complete CRUD operations for categories
+  - Hierarchical structure support (parent/child relationships)
+  - Automatic slug generation from names
+  - Category activation/deactivation
+  - Statistics queries (post counts per category)
+  - Top-level and child category queries
+  - Validation for deletion constraints (no children/posts)
+  - Comprehensive logging with SLF4J
+
+- ✅ **TagService** (450+ lines): Fully implemented
+  - Complete CRUD operations for tags with name/slug uniqueness
+  - Usage count management and automatic tracking
+  - Search functionality (by name, keyword matching)
+  - Popular tags and recommendation engine
+  - Tag association management (many-to-many with posts)
+  - Related tags discovery and intelligent recommendations
+  - Statistics queries (total, used, unused counts)
+  - Batch operations (get/create multiple tags)
+  - Force delete with association cleanup
+  - Comprehensive logging with SLF4J
+
 - 🔄 **Remaining Services** (Need Implementation):
-  - **PostService**: Blog post publishing workflow, search, view count tracking
-  - **CategoryService**: Category CRUD with hierarchical structure support
-  - **TagService**: Tag management and many-to-many post associations
   - **MediaService**: File upload validation, storage, URL generation
   - **SettingsService**: Key-value configuration management
   - **ThemesService**: Theme switching and customization
@@ -411,26 +443,35 @@ All entities use JPA annotations and Lombok for reduced boilerplate code.
 - All 7 repositories are auto-configured and available for testing
 - SQLite database connection tested and working
 - 7 JPA repository interfaces detected during startup
+- **Service Layer Tests**: 53 tests total, all passing
+  - `KonatablogApplicationTests`: 1 test - Spring context loading
+  - `CategoryServiceTest`: 10 tests - Complete CRUD, hierarchical operations, status management
+  - `PostServiceTest`: 3 tests - CRUD operations, publishing workflow
+  - `UserServiceTest`: 3 tests - User creation, deletion, duplicate validation
+  - `TagServiceTest`: 36 tests - Complete CRUD, usage management, search, recommendations, statistics, batch operations
+- **Test Coverage**: 4/7 services have comprehensive unit tests
 
 **Next Testing Priorities**:
-1. Add service layer unit tests (start with UserServiceTest)
-2. Test repository custom queries with actual data
-3. Integration tests with database operations
-4. Test exception handling scenarios (ResourceNotFoundException, DuplicateResourceException)
-5. Test authentication and authorization flows
+1. ✅ Add service layer unit tests (UserServiceTest, PostServiceTest, CategoryServiceTest, TagServiceTest complete)
+2. Add service layer unit tests for remaining services (MediaServiceTest, SettingsServiceTest, ThemesServiceTest)
+3. Test repository custom queries with actual data
+4. Integration tests with database operations
+5. Test exception handling scenarios (ResourceNotFoundException, DuplicateResourceException)
+6. Test authentication and authorization flows
 
 **Test Database**: Tests use the same SQLite database at `data/konatablog.db`
 - Current tests create tables but don't interfere with existing data
 - Schema migration warnings are expected (SQLite ALTER TABLE limitations)
 - Consider using separate test profile for test database isolation
+- Tests run successfully with full Spring Boot context initialization
 
 ## Development Approach
 
-**Current Status**: ✅ Repository Layer Complete, ✅ UserService Complete
+**Current Status**: ✅ Repository Layer Complete, ✅ 4/7 Service Layer Complete (UserService, PostService, CategoryService, TagService)
 
 **Recommended Flow**:
 1. ✅ **Complete repository layer**: All repositories implemented with custom queries
-2. 🔄 **Complete service layer**: Implement remaining business logic services
+2. 🔄 **Complete service layer**: Implement remaining business logic services (3 remaining: MediaService, SettingsService, ThemesService)
 3. **Controller layer**: Build REST API endpoints
 4. **Authentication**: Integrate JWT-based security
 5. **Test first**: Add tests alongside new features
@@ -444,21 +485,22 @@ All entities use JPA annotations and Lombok for reduced boilerplate code.
 4. Verify JPA schema matches entities (check logs for DDL statements)
 5. Test repository methods with sample data
 6. Run `./mvnw test -Dtest=KonatablogApplicationTests` - verify basic context loads ✅
+7. Run `./mvnw test` - verify all 53 tests pass ✅
 
-This is a **growing project** - entities, repositories, security configuration, and UserService are complete, ready for remaining service and controller implementation.
+This is a **growing project** - entities, repositories, security configuration, and 4/7 service implementations are complete, ready for remaining service (MediaService, SettingsService, ThemesService) and controller implementation.
 
 ## Service Layer Implementation Guidelines
 
-**Service Layer Structure** (🔄 IN PROGRESS):
+**Service Layer Structure** (🔄 IN PROGRESS - 4/7 complete):
 ```
 src/main/java/wiki/kana/service/
-├── UserService.java          # User management & authentication
-├── PostService.java          # Blog post business logic
-├── CategoryService.java      # Category management
-├── TagService.java           # Tag management
-├── MediaService.java         # File upload & media management
-├── SettingsService.java      # System configuration
-└── ThemesService.java        # Theme management
+├── UserService.java          # ✅ User management & authentication
+├── PostService.java          # ✅ Blog post business logic
+├── CategoryService.java      # ✅ Category management
+├── TagService.java           # ✅ Tag management
+├── MediaService.java         # 🔄 File upload & media management (TODO)
+├── SettingsService.java      # 🔄 System configuration (TODO)
+└── ThemesService.java        # 🔄 Theme management (TODO)
 ```
 
 **Service Implementation Patterns**:

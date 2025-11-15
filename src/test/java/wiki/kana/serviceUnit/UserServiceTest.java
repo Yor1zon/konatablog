@@ -1,4 +1,4 @@
-package wiki.kana.service;
+package wiki.kana.serviceUnit;
 
 import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
@@ -11,6 +11,7 @@ import wiki.kana.entity.User;
 import wiki.kana.exception.DuplicateResourceException;
 import wiki.kana.exception.ResourceNotFoundException;
 import wiki.kana.repository.UserRepository;
+import wiki.kana.service.UserService;
 
 import java.time.LocalDateTime;
 import java.util.List;
