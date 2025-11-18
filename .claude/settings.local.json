@@ -11,7 +11,13 @@
       "Bash(./mvnw test -Dtest=WorkingBusinessIntegrationTest -q)",
       "Bash(sqlite3 data/konatablog.db \".tables\")",
       "Bash(./mvnw test -Dtest=RealDatabasePersistenceTest -q)",
-      "Bash(sqlite3 data/konatablog-integration.db \"SELECT ''=== 表列表 ==='' as info; SELECT name FROM sqlite_master WHERE type=''table''; SELECT ''=== 用户数据 ==='' as info; SELECT id, username, email, role, is_active FROM users LIMIT 5;\")"
+      "Bash(sqlite3 data/konatablog-integration.db \"SELECT ''=== 表列表 ==='' as info; SELECT name FROM sqlite_master WHERE type=''table''; SELECT ''=== 用户数据 ==='' as info; SELECT id, username, email, role, is_active FROM users LIMIT 5;\")",
+      "Bash(./mvnw test -Dtest=KonatablogApplicationTests -q)",
+      "Bash(./mvnw clean compile -q)",
+      "Bash(./mvnw spring-boot:run)",
+      "Bash(sqlite3 data/konatablog.db \".schema users\")",
+      "Bash(sqlite3 data/konatablog.db \"SELECT name FROM sqlite_master WHERE type=''table'';\")",
+      "Bash(curl -X GET http://localhost:8081/api/auth/validate)"
     ],
     "deny": [],
     "ask": []
