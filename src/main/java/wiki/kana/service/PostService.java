@@ -150,6 +150,18 @@ public class PostService {
         return postRepository.findByCategory(category, pageable);
     }
 
+    /**
+     * 按标签搜索
+     */
+    @Transactional(readOnly = true)
+    public List<Post> findByTagId(Long tagId) {
+        log.debug("查询标签 {} 的博客", tagId);
+        Tag tag = tagRepository.findById(tagId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag not found with id: " + tagId));
+
+        return postRepository.findByTag(tag);
+    }
+
     // ==================== 状态管理功能 ====================
 
     /**
@@ -287,11 +299,37 @@ public class PostService {
         Post existingPost = findById(id);
 
         // 更新基本信息
-        existingPost.setTitle(updatedPost.getTitle());
-        existingPost.setContent(updatedPost.getContent());
+        if (StringUtils.hasText(updatedPost.getTitle())) {
+            existingPost.setTitle(updatedPost.getTitle());
+        }
+        if (StringUtils.hasText(updatedPost.getContent())) {
+            existingPost.setContent(updatedPost.getContent());
+        }
+
+        // 更新摘要
+        if (updatedPost.getExcerpt() != null) {
+            existingPost.setExcerpt(updatedPost.getExcerpt());
+        }
+
+        // 更新状态
+        if (updatedPost.getStatus() != null) {
+            existingPost.setStatus(updatedPost.getStatus());
+        }
+
+        // 更新特色标记
+        if (updatedPost.getIsFeatured() != null) {
+            existingPost.setIsFeatured(updatedPost.getIsFeatured());
+        }
+
+        // 更新分类
+        if (updatedPost.getCategory() != null) {
+            existingPost.setCategory(updatedPost.getCategory());
+        }
 
         // 更新slug
-        if (!StringUtils.hasText(existingPost.getSlug()) && StringUtils.hasText(updatedPost.getTitle())) {
+        if (StringUtils.hasText(updatedPost.getSlug())) {
+            existingPost.setSlug(updatedPost.getSlug());
+        } else if (!StringUtils.hasText(existingPost.getSlug()) && StringUtils.hasText(updatedPost.getTitle())) {
             existingPost.setSlug(generateSlug(updatedPost.getTitle()));
         }
 
