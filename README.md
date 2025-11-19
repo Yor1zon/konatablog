@@ -1,0 +1,1 @@
+Java-based personal blog project, assisted by codex/claude code.
