@@ -428,6 +428,20 @@ public class UserService {
     }
 
     /**
+     * 更新用户头像
+     *
+     * @param id        用户ID
+     * @param avatarUrl 头像URL
+     * @return 更新后的用户
+     */
+    public User updateAvatar(Long id, String avatarUrl) {
+        log.info("Updating avatar for user ID: {}", id);
+        User user = findById(id);
+        user.setAvatarUrl(avatarUrl);
+        return userRepository.save(user);
+    }
+
+    /**
      * 检查用户名是否存在
      *
      * @param username 用户名

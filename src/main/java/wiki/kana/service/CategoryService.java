@@ -293,6 +293,26 @@ public class CategoryService {
     }
 
     /**
+     * 批量更新分类排序
+     *
+     * @param sortOrders 排序映射
+     */
+    public void updateCategorySortOrders(java.util.Map<Long, Integer> sortOrders) {
+        if (sortOrders == null || sortOrders.isEmpty()) {
+            return;
+        }
+        sortOrders.forEach((id, order) -> {
+            if (id == null || order == null) {
+                return;
+            }
+            Category category = findById(id);
+            category.setSortOrder(order);
+            categoryRepository.save(category);
+        });
+        log.info("Updated sort order for {} categories", sortOrders.size());
+    }
+
+    /**
      * 统计分类下已发布博客数量
      *
      * @param categoryId 分类ID
@@ -358,4 +378,3 @@ public class CategoryService {
         return sanitized;
     }
 }
-

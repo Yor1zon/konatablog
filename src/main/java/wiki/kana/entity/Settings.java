@@ -100,6 +100,9 @@ public class Settings {
         public static final String SITE_DESCRIPTION = "site.description";  // 网站描述
         public static final String SITE_KEYWORD = "site.keywords";          // 搜索关键词
         public static final String SITE_EMAIL = "site.email";              // 客服邮箱
+        public static final String AUTHOR_NAME = "author.name";            // 作者名称
+        public static final String SITE_PAGE_SIZE = "site.page_size";      // 页面大小
+        public static final String COMMENTS_ENABLED = "site.comments.enabled"; // 评论开启
 
         // 社交媒体
         public static final String SOCIAL_GITHUB = "social.github";    // GitHub

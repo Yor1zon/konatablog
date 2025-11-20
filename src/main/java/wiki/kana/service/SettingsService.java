@@ -384,6 +384,18 @@ public class SettingsService {
             setValue(Settings.ConfigKeys.THEME_CURRENT, "default", "theme", Settings.OptionType.TEXT, "当前主题", null);
         }
 
+        if (!settingsRepository.existsByConfigKey(Settings.ConfigKeys.AUTHOR_NAME)) {
+            setValue(Settings.ConfigKeys.AUTHOR_NAME, "博主", "site", Settings.OptionType.TEXT, "作者名称", null);
+        }
+
+        if (!settingsRepository.existsByConfigKey(Settings.ConfigKeys.SITE_PAGE_SIZE)) {
+            setValue(Settings.ConfigKeys.SITE_PAGE_SIZE, "10", "site", Settings.OptionType.NUMBER, "分页大小", null);
+        }
+
+        if (!settingsRepository.existsByConfigKey(Settings.ConfigKeys.COMMENTS_ENABLED)) {
+            setValue(Settings.ConfigKeys.COMMENTS_ENABLED, "true", "site", Settings.OptionType.CHECKBOX, "是否启用评论", null);
+        }
+
         log.info("默认站点配置初始化完成");
     }
 

@@ -203,6 +203,10 @@ Response: (分页格式，同列表接口)
 #### 获取分类列表（游客可访问）
 ```http
 GET /api/categories
+Query Params:
+- includeCounts=true|false  // 是否附带文章数量统计，默认true
+- parentId=number           // 仅返回指定父级的子分类
+
 Response:
 {
   "success": true,
@@ -226,6 +230,42 @@ GET /api/categories/{id}
 Response: (同单个分类格式)
 ```
 
+#### 根据Slug获取分类（游客可访问）
+```http
+GET /api/categories/slug/{slug}
+Response: (同单个分类格式，slug唯一)
+```
+
+#### 获取分类树（游客可访问）
+```http
+GET /api/categories/tree?includeEmpty=false
+Response:
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "技术",
+      "slug": "tech",
+      "children": [
+        {
+          "id": 2,
+          "name": "Java",
+          "slug": "java",
+          "children": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### 获取分类下文章（游客可访问）
+```http
+GET /api/categories/{id}/posts?page=0&size=10&status=PUBLISHED
+Response: (分页格式，content为文章列表)
+```
+
 #### 创建分类（需要认证）
 ```http
 POST /api/categories
@@ -236,7 +276,22 @@ Request:
 {
   "name": "新分类",
   "description": "分类描述",
-  "parentId": 1  // 可选，用于创建子分类
+  "parentId": 1,      // 可选，用于创建子分类
+  "slug": "custom-slug"  // 可选，不传则根据名称生成
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "id": 12,
+    "name": "新分类",
+    "slug": "xin-fen-lei",
+    "description": "分类描述",
+    "parentId": 1,
+    "postCount": 0,
+    "createdAt": "2025-01-01T12:00:00"
+  }
 }
 ```
 
@@ -244,6 +299,17 @@ Request:
 ```http
 PUT /api/categories/{id}
 Authorization: Bearer <token>
+Content-Type: application/json
+
+Request:
+{
+  "name": "更新分类名",
+  "description": "新的描述",
+  "slug": "updated-slug",
+  "parentId": null
+}
+
+Response: (同单个分类格式)
 ```
 
 #### 删除分类（需要认证）
@@ -251,6 +317,48 @@ Authorization: Bearer <token>
 DELETE /api/categories/{id}
 Authorization: Bearer <token>
 ```
+
+#### 批量调整分类顺序（需要认证）
+```http
+PATCH /api/categories/reorder
+Authorization: Bearer <token>
+Content-Type: application/json
+
+Request:
+{
+  "orders": [
+    { "id": 1, "order": 1 },
+    { "id": 2, "order": 2 }
+  ]
+}
+```
+
+#### 获取分类统计（需要认证）
+```http
+GET /api/categories/stats
+Authorization: Bearer <token>
+
+Response:
+{
+  "success": true,
+  "data": {
+    "totalCategories": 12,
+    "topCategories": [
+      {
+        "id": 1,
+        "name": "技术",
+        "postCount": 34
+      }
+    ],
+    "emptyCategories": 3
+  }
+}
+```
+
+> **验证规则**
+- 分类名称、Slug唯一且长度 2-50 字符
+- 不允许选择自身或子节点作为 `parentId`
+- 删除分类前需确保无文章或启用级联转移策略
 
 ### 4. TagController - 标签控制器
 
@@ -290,6 +398,37 @@ Response:
 }
 ```
 
+#### 获取标签详情（游客可访问）
+```http
+GET /api/tags/{id}
+Response: (同单个标签格式)
+```
+
+#### 根据Slug获取标签（游客可访问）
+```http
+GET /api/tags/slug/{slug}
+Response: (同单个标签格式)
+```
+
+#### 标签模糊搜索（游客可访问）
+```http
+GET /api/tags/search?q=java&page=0&size=20
+Response: (分页格式，content为标签列表)
+```
+
+#### 标签输入建议（游客可访问）
+```http
+GET /api/tags/suggestions?q=ja&limit=8
+Response:
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Java" },
+    { "id": 2, "name": "JavaScript" }
+  ]
+}
+```
+
 #### 创建标签（需要认证）
 ```http
 POST /api/tags
@@ -299,14 +438,25 @@ Content-Type: application/json
 Request:
 {
   "name": "新标签",
-  "description": "标签描述"
+  "description": "标签描述",
+  "slug": "custom-slug"  // 可选
 }
+
+Response: (同单个标签格式)
 ```
 
 #### 更新标签（需要认证）
 ```http
 PUT /api/tags/{id}
 Authorization: Bearer <token>
+Content-Type: application/json
+
+Request:
+{
+  "name": "更新标签",
+  "description": "新的描述",
+  "slug": "new-slug"
+}
 ```
 
 #### 删除标签（需要认证）
@@ -314,6 +464,38 @@ Authorization: Bearer <token>
 DELETE /api/tags/{id}
 Authorization: Bearer <token>
 ```
+
+#### 批量创建/绑定标签（需要认证）
+```http
+POST /api/tags/bulk
+Authorization: Bearer <token>
+Content-Type: application/json
+
+Request:
+{
+  "names": ["Java", "Spring", "Docker"]
+}
+
+Response:
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Java", "slug": "java" },
+    { "id": 5, "name": "Docker", "slug": "docker" }
+  ]
+}
+```
+
+#### 获取标签下文章（游客可访问）
+```http
+GET /api/tags/{id}/posts?page=0&size=10&status=PUBLISHED
+Response: (分页格式，content为文章列表)
+```
+
+> **标签规则**
+- 标签名称与Slug唯一、长度 2-30 字符
+- 热门标签按 `postCount` 降序缓存60秒
+- 批量接口仅对新标签创建，已存在的标签直接返回
 
 ### 5. MediaController - 媒体文件控制器
 

@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import wiki.kana.dto.CommonResponse;
 import wiki.kana.dto.post.PostCreateRequest;
+import wiki.kana.dto.post.PostMapper;
 import wiki.kana.dto.post.PostResponse;
 import wiki.kana.dto.post.PostUpdateRequest;
 import wiki.kana.entity.Post;
@@ -57,7 +58,7 @@ public class PostController {
 
         Pageable pageable = buildPageable(page, size, sort);
         Page<PostResponse> response = postService.findAllPosts(pageable)
-                .map(this::toPostResponse);
+                .map(PostMapper::toPostResponse);
         return ResponseEntity.ok(CommonResponse.success(response));
     }
 
@@ -70,7 +71,7 @@ public class PostController {
             Post post = postService.findById(id);
             postService.incrementViewCount(id);
             post.setViewCount(post.getViewCount() + 1);
-            return ResponseEntity.ok(CommonResponse.success(toPostResponse(post)));
+            return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(post)));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CommonResponse.error("POST_NOT_FOUND", e.getMessage()));
@@ -86,7 +87,7 @@ public class PostController {
             Post post = postService.findBySlug(slug);
             postService.incrementViewCount(post.getId());
             post.setViewCount(post.getViewCount() + 1);
-            return ResponseEntity.ok(CommonResponse.success(toPostResponse(post)));
+            return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(post)));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CommonResponse.error("POST_NOT_FOUND", e.getMessage()));
@@ -122,7 +123,7 @@ public class PostController {
                 resultPage = postService.findAllPosts(pageable);
             }
 
-            return ResponseEntity.ok(CommonResponse.success(resultPage.map(this::toPostResponse)));
+            return ResponseEntity.ok(CommonResponse.success(resultPage.map(PostMapper::toPostResponse)));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CommonResponse.error("RESOURCE_NOT_FOUND", e.getMessage()));
@@ -146,7 +147,7 @@ public class PostController {
             Post post = buildPostFromCreateRequest(createRequest);
             Post created = postService.createPost(post, authorId);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(CommonResponse.success(toPostResponse(created), "博客创建成功"));
+                    .body(CommonResponse.success(PostMapper.toPostResponse(created), "博客创建成功"));
         } catch (ResourceNotFoundException e) {
             log.warn("Failed to create post: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -179,7 +180,7 @@ public class PostController {
         try {
             Post updatedPost = buildPostFromUpdateRequest(updateRequest);
             Post result = postService.updatePost(id, updatedPost);
-            return ResponseEntity.ok(CommonResponse.success(toPostResponse(result), "博客更新成功"));
+            return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(result), "博客更新成功"));
         } catch (ResourceNotFoundException e) {
             log.warn("Failed to update post {}: {}", id, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -229,7 +230,7 @@ public class PostController {
 
         try {
             Post post = postService.publishPost(id);
-            return ResponseEntity.ok(CommonResponse.success(toPostResponse(post), "博客已发布"));
+            return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(post), "博客已发布"));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CommonResponse.error("POST_NOT_FOUND", e.getMessage()));
@@ -251,7 +252,7 @@ public class PostController {
 
         try {
             Post post = postService.unpublishPost(id);
-            return ResponseEntity.ok(CommonResponse.success(toPostResponse(post), "博客已转为草稿"));
+            return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(post), "博客已转为草稿"));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CommonResponse.error("POST_NOT_FOUND", e.getMessage()));
@@ -351,49 +352,4 @@ public class PostController {
         return new PageImpl<>(content, pageable, posts.size());
     }
 
-    private PostResponse toPostResponse(Post post) {
-        PostResponse response = PostResponse.builder()
-                .id(post.getId())
-                .title(post.getTitle())
-                .slug(post.getSlug())
-                .content(post.getContent())
-                .excerpt(post.getExcerpt())
-                .status(post.getStatus())
-                .isFeatured(post.getIsFeatured())
-                .viewCount(post.getViewCount())
-                .publishedAt(post.getPublishedAt())
-                .createdAt(post.getCreatedAt())
-                .updatedAt(post.getUpdatedAt())
-                .build();
-
-        if (post.getAuthor() != null) {
-            response.setAuthor(PostResponse.AuthorDto.builder()
-                    .id(post.getAuthor().getId())
-                    .username(post.getAuthor().getUsername())
-                    .nickname(post.getAuthor().getDisplayName())
-                    .build());
-        }
-
-        if (post.getCategory() != null) {
-            response.setCategory(PostResponse.CategoryDto.builder()
-                    .id(post.getCategory().getId())
-                    .name(post.getCategory().getName())
-                    .slug(post.getCategory().getSlug())
-                    .build());
-        }
-
-        if (!CollectionUtils.isEmpty(post.getTags())) {
-            response.setTags(post.getTags().stream()
-                    .map(tag -> PostResponse.TagDto.builder()
-                            .id(tag.getId())
-                            .name(tag.getName())
-                            .slug(tag.getSlug())
-                            .build())
-                    .collect(Collectors.toList()));
-        } else {
-            response.setTags(Collections.emptyList());
-        }
-
-        return response;
-    }
 }
