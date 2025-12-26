@@ -45,6 +45,22 @@ public class PostService {
     }
 
     /**
+     * 根据ID查找已发布的博客（公共访问）
+     */
+    @Transactional(readOnly = true)
+    public Post findPublishedById(Long id) {
+        log.debug("Finding published post by ID: {}", id);
+        Post post = postRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found with id: " + id));
+
+        if (post.getStatus() != Post.PostStatus.PUBLISHED) {
+            throw new ResourceNotFoundException("Published post not found with id: " + id);
+        }
+
+        return post;
+    }
+
+    /**
      * 根据Slug查找博客
      */
     public Post findBySlug(String slug) {
@@ -54,11 +70,36 @@ public class PostService {
     }
 
     /**
+     * 根据Slug查找已发布的博客（公共访问）
+     */
+    @Transactional(readOnly = true)
+    public Post findPublishedBySlug(String slug) {
+        log.debug("Finding published post by slug: {}", slug);
+        Post post = postRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found with slug: " + slug));
+
+        if (post.getStatus() != Post.PostStatus.PUBLISHED) {
+            throw new ResourceNotFoundException("Published post not found with slug: " + slug);
+        }
+
+        return post;
+    }
+
+    /**
      * 查找所有博客
      */
     public List<Post> findAll() {
         log.debug("查询全部博客");
         return postRepository.findAll();
+    }
+
+    /**
+     * 查找所有已发布的博客（公共访问）
+     */
+    @Transactional(readOnly = true)
+    public List<Post> findPublishedPosts() {
+        log.debug("查询所有已发布的博客");
+        return postRepository.findPublishedPosts();
     }
 
     /**
@@ -83,6 +124,22 @@ public class PostService {
     public Page<Post> findAllPosts(Pageable pageable) {
         log.debug("分页查询博客, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
         return postRepository.findAll(pageable);
+    }
+
+    /**
+     * 分页查询已发布的博客（公共访问）
+     */
+    @Transactional(readOnly = true)
+    public Page<Post> findPublishedPosts(Pageable pageable) {
+        log.debug("分页查询已发布的博客, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
+        List<Post> publishedPosts = postRepository.findPublishedPosts(pageable);
+
+        // 转换为Page对象
+        int start = Math.min((int) pageable.getOffset(), publishedPosts.size());
+        int end = Math.min(start + pageable.getPageSize(), publishedPosts.size());
+        List<Post> content = publishedPosts.subList(start, end);
+
+        return new org.springframework.data.domain.PageImpl<>(content, pageable, publishedPosts.size());
     }
 
     // ==================== 搜索功能 ====================
@@ -160,6 +217,32 @@ public class PostService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tag not found with id: " + tagId));
 
         return postRepository.findByTag(tag);
+    }
+
+    /**
+     * 分页根据标签查询已发布文章
+     */
+    @Transactional(readOnly = true)
+    public Page<Post> findPublishedByTag(Long tagId, Pageable pageable) {
+        log.debug("Paginate published posts by tag {}", tagId);
+        Tag tag = tagRepository.findById(tagId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag not found with id: " + tagId));
+        return postRepository.findPublishedByTag(tag, pageable);
+    }
+
+    /**
+     * 分页根据年份查询已发布文章
+     */
+    @Transactional(readOnly = true)
+    public Page<Post> findPublishedByYear(int year, Pageable pageable) {
+        if (year < 1970 || year > 9999) {
+            throw new IllegalArgumentException("Invalid year: " + year);
+        }
+
+        LocalDateTime start = LocalDateTime.of(year, 1, 1, 0, 0);
+        LocalDateTime end = start.plusYears(1).minusNanos(1);
+        log.debug("Paginate published posts between {} and {}", start, end);
+        return postRepository.findPublishedPostsBetween(start, end, pageable);
     }
 
     // ==================== 状态管理功能 ====================
@@ -263,6 +346,9 @@ public class PostService {
     @Transactional
     public Post createPost(Post post, Long authorId) {
         log.info("创建新博客，作者ID: {}", authorId);
+
+        // 确保阅读量从0开始
+        post.setViewCount(0);
 
         // 设置作者
         User author = userRepository.findById(authorId)
@@ -403,5 +489,105 @@ public class PostService {
                 .replaceAll("-{2,}", "-");
 
         return sanitized;
+    }
+
+    // ==================== 书签绑定需求特有功能 ====================
+
+    /**
+     * 设置文章标签（替换当前所有标签）
+     * @param postId 文章ID
+     * @param tagIds 标签ID列表
+     * @return 更新后的文章
+     */
+    @Transactional
+    public Post setPostTags(Long postId, List<Long> tagIds) {
+        log.debug("Setting tags for post {}: {}", postId, tagIds);
+
+        Post post = findById(postId);
+
+        // 清除现有标签关联
+        List<Tag> existingTags = new ArrayList<>(post.getTags());
+        for (Tag tag : existingTags) {
+            post.getTags().remove(tag);
+            tag.removePost(post);
+        }
+
+        // 添加新的标签关联
+        if (tagIds != null && !tagIds.isEmpty()) {
+            for (Long tagId : tagIds) {
+                Tag tag = tagRepository.findById(tagId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Tag not found with id: " + tagId));
+
+                if (!post.getTags().contains(tag)) {
+                    post.getTags().add(tag);
+                    tag.addPost(post);
+                }
+            }
+        }
+
+        // 保存更新
+        postRepository.save(post);
+
+        // 保存所有相关标签
+        for (Tag tag : post.getTags()) {
+            tagRepository.save(tag);
+        }
+
+        log.info("Successfully set {} tags for post {}", post.getTags().size(), postId);
+        return post;
+    }
+
+    /**
+     * 添加单个标签到文章
+     * @param postId 文章ID
+     * @param tagId 标签ID
+     * @return 更新后的文章
+     */
+    @Transactional
+    public Post addTagToPost(Long postId, Long tagId) {
+        log.debug("Adding tag {} to post {}", tagId, postId);
+
+        Post post = findById(postId);
+        Tag tag = tagRepository.findById(tagId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag not found with id: " + tagId));
+
+        if (!post.getTags().contains(tag)) {
+            post.getTags().add(tag);
+            tag.addPost(post);
+            postRepository.save(post);
+            tagRepository.save(tag);
+            log.info("Successfully added tag {} to post {}", tagId, postId);
+        } else {
+            log.debug("Tag {} is already associated with post {}", tagId, postId);
+        }
+
+        return post;
+    }
+
+    /**
+     * 从文章移除单个标签
+     * @param postId 文章ID
+     * @param tagId 标签ID
+     * @return 更新后的文章
+     */
+    @Transactional
+    public Post removeTagFromPost(Long postId, Long tagId) {
+        log.debug("Removing tag {} from post {}", tagId, postId);
+
+        Post post = findById(postId);
+        Tag tag = tagRepository.findById(tagId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag not found with id: " + tagId));
+
+        if (post.getTags().contains(tag)) {
+            post.getTags().remove(tag);
+            tag.removePost(post);
+            postRepository.save(post);
+            tagRepository.save(tag);
+            log.info("Successfully removed tag {} from post {}", tagId, postId);
+        } else {
+            log.debug("Tag {} is not associated with post {}", tagId, postId);
+        }
+
+        return post;
     }
 }

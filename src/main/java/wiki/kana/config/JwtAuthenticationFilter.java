@@ -99,10 +99,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // 跳过不需要认证的路径
         return path.startsWith("/api/auth/login") ||
                path.startsWith("/api/auth/validate") ||
-               path.startsWith("/api/posts/") ||
-               path.startsWith("/api/categories/") ||
-               path.startsWith("/api/tags/") ||
-               path.startsWith("/api/settings/public") ||
+               path.equals("/api/posts") || path.startsWith("/api/posts/") ||
+               path.equals("/api/categories") || path.startsWith("/api/categories/") ||
+               path.equals("/api/tags") || path.startsWith("/api/tags/") ||
+               path.equals("/api/settings/public") || path.startsWith("/api/settings/public/") ||
+               path.equals("/api/media") || path.startsWith("/api/media/") ||
                path.startsWith("/error") ||
                path.startsWith("/actuator");
     }

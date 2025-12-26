@@ -89,4 +89,21 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
      * 查找按名称排序的标签
      */
     List<Tag> findAllByOrderByNameAsc();
+
+    /**
+     * 不区分大小写按名称查找标签
+     */
+    Optional<Tag> findByNameIgnoreCase(String name);
+
+    /**
+     * 不区分大小写按名称模糊搜索
+     */
+    @Query("SELECT t FROM Tag t WHERE LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%')) ORDER BY t.name ASC")
+    List<Tag> findByNameContainingIgnoreCase(@Param("keyword") String keyword);
+
+    /**
+     * 检查标签名称是否存在（不区分大小写）
+     */
+    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END FROM Tag t WHERE LOWER(t.name) = LOWER(:name)")
+    boolean existsByNameIgnoreCase(@Param("name") String name);
 }

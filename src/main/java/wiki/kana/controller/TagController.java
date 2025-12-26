@@ -18,9 +18,12 @@ import wiki.kana.dto.CommonResponse;
 import wiki.kana.dto.post.PostMapper;
 import wiki.kana.dto.post.PostResponse;
 import wiki.kana.dto.tag.TagBulkRequest;
+import wiki.kana.dto.tag.TagPostsRequest;
 import wiki.kana.dto.tag.TagRequest;
 import wiki.kana.dto.tag.TagResponse;
+import wiki.kana.dto.tag.TagSmartCreateRequest;
 import wiki.kana.dto.tag.TagUpdateRequest;
+import wiki.kana.dto.post.PostSummaryResponse;
 import wiki.kana.entity.Post;
 import wiki.kana.entity.Tag;
 import wiki.kana.exception.DuplicateResourceException;
@@ -106,7 +109,8 @@ public class TagController {
     public ResponseEntity<CommonResponse<Page<TagResponse>>> searchTags(
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "true") boolean ignoreCase) {
 
         if (!StringUtils.hasText(q)) {
             Page<TagResponse> empty = new PageImpl<>(Collections.emptyList(), PageRequest.of(page, size), 0);
@@ -114,7 +118,9 @@ public class TagController {
         }
 
         Pageable pageable = buildPageable(page, size, "name,asc");
-        List<Tag> result = tagService.searchByName(q);
+        List<Tag> result = ignoreCase ?
+                tagService.searchByNameIgnoreCase(q) :
+                tagService.searchByName(q);
         Page<Tag> pageData = buildPageFromList(result, pageable);
         return ResponseEntity.ok(CommonResponse.success(pageData.map(this::toTagResponse)));
     }
@@ -125,14 +131,19 @@ public class TagController {
     @GetMapping("/suggestions")
     public ResponseEntity<CommonResponse<List<TagResponse>>> suggestTags(
             @RequestParam String q,
-            @RequestParam(defaultValue = "8") int limit) {
+            @RequestParam(defaultValue = "8") int limit,
+            @RequestParam(defaultValue = "true") boolean ignoreCase) {
 
         if (!StringUtils.hasText(q)) {
             return ResponseEntity.ok(CommonResponse.success(Collections.emptyList()));
         }
 
         int safeLimit = Math.min(Math.max(limit, 1), 20);
-        List<TagResponse> suggestions = tagService.searchByName(q).stream()
+        List<Tag> searchResult = ignoreCase ?
+                tagService.searchByNameIgnoreCase(q) :
+                tagService.searchByName(q);
+
+        List<TagResponse> suggestions = searchResult.stream()
                 .limit(safeLimit)
                 .map(this::toTagResponse)
                 .collect(Collectors.toList());
@@ -284,6 +295,113 @@ public class TagController {
                 .map(this::toTagResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(CommonResponse.success(responses));
+    }
+
+    /**
+     * 智能创建标签接口
+     */
+    @PostMapping("/smart-create")
+    public ResponseEntity<CommonResponse<TagResponse>> smartCreateTag(
+            HttpServletRequest request,
+            @Valid @RequestBody TagSmartCreateRequest smartCreateRequest) {
+
+        if (resolveUserId(request) == null) {
+            return unauthorizedResponse();
+        }
+
+        try {
+            Tag tag = tagService.findOrCreateByName(
+                    smartCreateRequest.getName(),
+                    smartCreateRequest.getDescription(),
+                    smartCreateRequest.getColor()
+            );
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(CommonResponse.success(toTagResponse(tag), "标签创建成功"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(CommonResponse.error("VALIDATION_ERROR", e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取标签关联文章简要信息
+     */
+    @GetMapping("/{id}/posts-summary")
+    public ResponseEntity<CommonResponse<Page<PostSummaryResponse>>> getTagPostsSummary(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status) {
+
+        Pageable pageable = buildPageable(page, size, "createdAt,desc");
+
+        try {
+            List<Post> posts = tagService.getTagPostsSummary(id, status);
+            Page<Post> pageData = buildPageFromList(posts, pageable);
+            return ResponseEntity.ok(CommonResponse.success(pageData.map(PostSummaryResponse::fromPost)));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("TAG_NOT_FOUND", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(CommonResponse.error("VALIDATION_ERROR", "无效的状态参数"));
+        }
+    }
+
+    /**
+     * 批量添加文章到标签
+     */
+    @PostMapping("/{id}/posts")
+    public ResponseEntity<CommonResponse<Void>> addPostsToTag(
+            @PathVariable Long id,
+            @Valid @RequestBody TagPostsRequest request,
+            HttpServletRequest httpRequest) {
+
+        if (resolveUserId(httpRequest) == null) {
+            return unauthorizedResponse();
+        }
+
+        try {
+            int addedCount = request.getPostIds().size();
+            tagService.addPostsToTag(id, request.getPostIds());
+            return ResponseEntity.ok(CommonResponse.success(
+                    String.format("批量添加成功，共添加%d篇文章", addedCount)
+            ));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("TAG_NOT_FOUND", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(CommonResponse.error("VALIDATION_ERROR", e.getMessage()));
+        }
+    }
+
+    /**
+     * 批量从标签移除文章
+     */
+    @DeleteMapping("/{id}/posts")
+    public ResponseEntity<CommonResponse<Void>> removePostsFromTag(
+            @PathVariable Long id,
+            @Valid @RequestBody TagPostsRequest request,
+            HttpServletRequest httpRequest) {
+
+        if (resolveUserId(httpRequest) == null) {
+            return unauthorizedResponse();
+        }
+
+        try {
+            int removedCount = request.getPostIds().size();
+            tagService.removePostsFromTag(id, request.getPostIds());
+            return ResponseEntity.ok(CommonResponse.success(
+                    String.format("批量移除成功，共移除%d篇文章", removedCount)
+            ));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("TAG_NOT_FOUND", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(CommonResponse.error("VALIDATION_ERROR", e.getMessage()));
+        }
     }
 
     private TagResponse toTagResponse(Tag tag) {

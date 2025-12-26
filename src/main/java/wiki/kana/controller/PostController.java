@@ -18,6 +18,7 @@ import wiki.kana.dto.CommonResponse;
 import wiki.kana.dto.post.PostCreateRequest;
 import wiki.kana.dto.post.PostMapper;
 import wiki.kana.dto.post.PostResponse;
+import wiki.kana.dto.post.PostTagsRequest;
 import wiki.kana.dto.post.PostUpdateRequest;
 import wiki.kana.entity.Post;
 import wiki.kana.entity.Tag;
@@ -48,13 +49,48 @@ public class PostController {
     private final JwtTokenUtil jwtTokenUtil;
 
     /**
-     * 获取博客列表
+     * 获取博客列表（仅显示已发布的博客）
      */
     @GetMapping
     public ResponseEntity<CommonResponse<Page<PostResponse>>> listPosts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+            @RequestParam(defaultValue = "publishedAt,desc") String sort) {
+
+        Pageable pageable = buildPageable(page, size, sort);
+        Page<PostResponse> response = postService.findPublishedPosts(pageable)
+                .map(PostMapper::toPostResponse);
+        return ResponseEntity.ok(CommonResponse.success(response));
+    }
+
+    /**
+     * 获取博客详情（仅显示已发布的博客）
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<CommonResponse<PostResponse>> getPost(@PathVariable Long id) {
+        try {
+            Post post = postService.findPublishedById(id);
+            postService.incrementViewCount(id);
+            return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(post)));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("POST_NOT_FOUND", e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取所有博客列表（管理端可见所有文章）
+     */
+    @GetMapping("/admin/all")
+    public ResponseEntity<CommonResponse<Page<PostResponse>>> listAllPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort,
+            HttpServletRequest request) {
+
+        if (resolveUserId(request) == null) {
+            return unauthorizedResponse();
+        }
 
         Pageable pageable = buildPageable(page, size, sort);
         Page<PostResponse> response = postService.findAllPosts(pageable)
@@ -63,14 +99,17 @@ public class PostController {
     }
 
     /**
-     * 获取博客详情
+     * 获取博客详情（管理端可见所有文章）
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<CommonResponse<PostResponse>> getPost(@PathVariable Long id) {
+    @GetMapping("/admin/{id}")
+    public ResponseEntity<CommonResponse<PostResponse>> getPostForAdmin(@PathVariable Long id, HttpServletRequest request) {
+        if (resolveUserId(request) == null) {
+            return unauthorizedResponse();
+        }
+
         try {
             Post post = postService.findById(id);
-            postService.incrementViewCount(id);
-            post.setViewCount(post.getViewCount() + 1);
+            // 管理端访问不增加浏览量
             return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(post)));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -79,14 +118,13 @@ public class PostController {
     }
 
     /**
-     * 根据Slug获取博客
+     * 根据Slug获取博客（仅显示已发布的博客）
      */
     @GetMapping("/slug/{slug}")
     public ResponseEntity<CommonResponse<PostResponse>> getPostBySlug(@PathVariable String slug) {
         try {
-            Post post = postService.findBySlug(slug);
+            Post post = postService.findPublishedBySlug(slug);
             postService.incrementViewCount(post.getId());
-            post.setViewCount(post.getViewCount() + 1);
             return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(post)));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -95,7 +133,26 @@ public class PostController {
     }
 
     /**
-     * 搜索博客
+     * 根据Slug获取博客（管理端可见所有文章）
+     */
+    @GetMapping("/admin/slug/{slug}")
+    public ResponseEntity<CommonResponse<PostResponse>> getPostBySlugForAdmin(@PathVariable String slug, HttpServletRequest request) {
+        if (resolveUserId(request) == null) {
+            return unauthorizedResponse();
+        }
+
+        try {
+            Post post = postService.findBySlug(slug);
+            // 管理端访问不增加浏览量
+            return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(post)));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("POST_NOT_FOUND", e.getMessage()));
+        }
+    }
+
+    /**
+     * 搜索博客（仅搜索已发布的博客）
      */
     @GetMapping("/search")
     public ResponseEntity<CommonResponse<Page<PostResponse>>> searchPosts(
@@ -105,6 +162,96 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "publishedAt,desc") String sort) {
+
+        Pageable pageable = buildPageable(page, size, sort);
+
+        try {
+            Page<Post> resultPage;
+
+            if (category != null) {
+                resultPage = postService.findByCategory(category, pageable);
+                // 过滤出已发布的博客
+                List<Post> publishedPosts = resultPage.getContent().stream()
+                        .filter(post -> post.getStatus() == Post.PostStatus.PUBLISHED)
+                        .collect(Collectors.toList());
+                resultPage = buildPageFromList(publishedPosts, pageable);
+            } else if (tag != null) {
+                List<Post> posts = postService.findByTagId(tag);
+                resultPage = buildPageFromList(posts, pageable);
+            } else if (StringUtils.hasText(q)) {
+                List<Post> posts = postService.searchByKeyword(q);
+                resultPage = buildPageFromList(posts, pageable);
+            } else {
+                resultPage = postService.findPublishedPosts(pageable);
+            }
+
+            return ResponseEntity.ok(CommonResponse.success(resultPage.map(PostMapper::toPostResponse)));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("RESOURCE_NOT_FOUND", e.getMessage()));
+        }
+    }
+
+    /**
+     * 按标签查询已发布文章
+     */
+    @GetMapping("/filter/tag/{tagId}")
+    public ResponseEntity<CommonResponse<Page<PostResponse>>> listPostsByTag(
+            @PathVariable Long tagId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "publishedAt,desc") String sort) {
+
+        Pageable pageable = buildPageable(page, size, sort);
+
+        try {
+            Page<PostResponse> posts = postService.findPublishedByTag(tagId, pageable)
+                    .map(PostMapper::toPostResponse);
+            return ResponseEntity.ok(CommonResponse.success(posts));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("TAG_NOT_FOUND", e.getMessage()));
+        }
+    }
+
+    /**
+     * 按年份查询已发布文章
+     */
+    @GetMapping("/filter/year/{year}")
+    public ResponseEntity<CommonResponse<Page<PostResponse>>> listPostsByYear(
+            @PathVariable int year,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "publishedAt,desc") String sort) {
+
+        Pageable pageable = buildPageable(page, size, sort);
+
+        try {
+            Page<PostResponse> posts = postService.findPublishedByYear(year, pageable)
+                    .map(PostMapper::toPostResponse);
+            return ResponseEntity.ok(CommonResponse.success(posts));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(CommonResponse.error("VALIDATION_ERROR", "年份参数无效"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(CommonResponse.error("VALIDATION_ERROR", "年份参数无效"));
+        }
+    }
+
+    @GetMapping("/admin/search")
+    public ResponseEntity<CommonResponse<Page<PostResponse>>> searchAllPosts(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long category,
+            @RequestParam(required = false) Long tag,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort,
+            HttpServletRequest request) {
+
+        if (resolveUserId(request) == null) {
+            return unauthorizedResponse();
+        }
 
         Pageable pageable = buildPageable(page, size, sort);
 
@@ -350,6 +497,72 @@ public class PostController {
         int end = Math.min(start + pageable.getPageSize(), posts.size());
         List<Post> content = posts.subList(start, end);
         return new PageImpl<>(content, pageable, posts.size());
+    }
+
+    /**
+     * 添加单个标签到文章
+     */
+    @PostMapping("/{id}/tags/{tagId}")
+    public ResponseEntity<CommonResponse<Void>> addTagToPost(
+            @PathVariable Long id,
+            @PathVariable Long tagId,
+            HttpServletRequest request) {
+
+        if (resolveUserId(request) == null) {
+            return unauthorizedResponse();
+        }
+
+        try {
+            postService.addTagToPost(id, tagId);
+            return ResponseEntity.ok(CommonResponse.success("标签添加成功"));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("RESOURCE_NOT_FOUND", e.getMessage()));
+        }
+    }
+
+    /**
+     * 从文章移除单个标签
+     */
+    @DeleteMapping("/{id}/tags/{tagId}")
+    public ResponseEntity<CommonResponse<Void>> removeTagFromPost(
+            @PathVariable Long id,
+            @PathVariable Long tagId,
+            HttpServletRequest request) {
+
+        if (resolveUserId(request) == null) {
+            return unauthorizedResponse();
+        }
+
+        try {
+            postService.removeTagFromPost(id, tagId);
+            return ResponseEntity.ok(CommonResponse.success("标签移除成功"));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("RESOURCE_NOT_FOUND", e.getMessage()));
+        }
+    }
+
+    /**
+     * 批量设置文章标签
+     */
+    @PutMapping("/{id}/tags")
+    public ResponseEntity<CommonResponse<PostResponse>> setPostTags(
+            @PathVariable Long id,
+            @Valid @RequestBody PostTagsRequest request,
+            HttpServletRequest httpRequest) {
+
+        if (resolveUserId(httpRequest) == null) {
+            return unauthorizedResponse();
+        }
+
+        try {
+            Post updated = postService.setPostTags(id, request.getTagIds());
+            return ResponseEntity.ok(CommonResponse.success(PostMapper.toPostResponse(updated), "标签设置成功"));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("RESOURCE_NOT_FOUND", e.getMessage()));
+        }
     }
 
 }

@@ -66,8 +66,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     /**
      * 根据标签查找博客
      */
-    @Query("SELECT p FROM Post p JOIN p.tags t WHERE t = :tag AND p.status = 'PUBLISHED'")
+    @Query("SELECT p FROM Post p JOIN p.tags t WHERE t = :tag AND p.status = 'PUBLISHED' ORDER BY p.publishedAt DESC")
     List<Post> findByTag(@Param("tag") Tag tag);
+
+    /**
+     * 根据标签查找已发布博客（分页）
+     */
+    @Query("SELECT p FROM Post p JOIN p.tags t WHERE t = :tag AND p.status = 'PUBLISHED' ORDER BY p.publishedAt DESC")
+    Page<Post> findPublishedByTag(@Param("tag") Tag tag, Pageable pageable);
 
     /**
      * 根据标题搜索博客
@@ -132,6 +138,12 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      */
     @Query("SELECT p FROM Post p WHERE p.publishedAt BETWEEN :start AND :end AND p.status = 'PUBLISHED' ORDER BY p.publishedAt DESC")
     List<Post> findPublishedPostsBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 查找指定时间范围内的已发布博客（分页）
+     */
+    @Query("SELECT p FROM Post p WHERE p.publishedAt BETWEEN :start AND :end AND p.status = 'PUBLISHED' ORDER BY p.publishedAt DESC")
+    Page<Post> findPublishedPostsBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, Pageable pageable);
 
     /**
      * 查找相关博客（按标签和分类）
