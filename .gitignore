@@ -31,3 +31,15 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### docs ###
+/docs/
+CLAUDE.md
+AGENTS.md
+
+### Database ###
+/data/
+*.db
+
+### Claude ###
+/.claude/
