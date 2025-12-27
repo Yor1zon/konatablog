@@ -14,6 +14,7 @@ import wiki.kana.repository.PostRepository;
 import wiki.kana.repository.UserRepository;
 import wiki.kana.service.PostService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -71,6 +72,30 @@ class PostServiceTest {
 
         assertEquals(Post.PostStatus.PUBLISHED, published.getStatus());
         assertNotNull(published.getPublishedAt());
+    }
+
+    @Test
+    @DisplayName("创建时若状态为已发布，应自动设置 publishedAt 并按时间倒序展示")
+    void createPublishedPostShouldSetPublishedAtAndSortByPublishedAtDesc() {
+        Post older = new Post();
+        older.setTitle("Older Published");
+        older.setContent("Older content");
+        older.setStatus(Post.PostStatus.PUBLISHED);
+        older.setPublishedAt(LocalDateTime.now().minusDays(1));
+        older = postService.createPost(older, authorId);
+
+        Post newer = new Post();
+        newer.setTitle("Newer Published");
+        newer.setContent("Newer content");
+        newer.setStatus(Post.PostStatus.PUBLISHED);
+        newer = postService.createPost(newer, authorId);
+
+        assertNotNull(newer.getPublishedAt());
+        assertTrue(newer.getPublishedAt().isAfter(older.getPublishedAt()));
+
+        Page<Post> page = postService.findPublishedPosts(PageRequest.of(0, 10));
+        assertFalse(page.isEmpty());
+        assertEquals(newer.getId(), page.getContent().get(0).getId());
     }
 
     @Test

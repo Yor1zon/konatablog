@@ -357,6 +357,12 @@ public class PostService {
 
         // 设置默认状态
         post.setStatus(post.getStatus() != null ? post.getStatus() : Post.PostStatus.DRAFT);
+        if (post.getStatus() == Post.PostStatus.PUBLISHED && post.getPublishedAt() == null) {
+            post.setPublishedAt(LocalDateTime.now());
+        }
+        if (post.getStatus() != Post.PostStatus.PUBLISHED) {
+            post.setPublishedAt(null);
+        }
 
         // 处理标签
         if (post.getTags() != null && !post.getTags().isEmpty()) {
@@ -397,9 +403,16 @@ public class PostService {
             existingPost.setExcerpt(updatedPost.getExcerpt());
         }
 
-        // 更新状态
+        // 更新状态（同时维护 publishedAt）
         if (updatedPost.getStatus() != null) {
-            existingPost.setStatus(updatedPost.getStatus());
+            Post.PostStatus nextStatus = updatedPost.getStatus();
+            existingPost.setStatus(nextStatus);
+
+            if (nextStatus == Post.PostStatus.PUBLISHED && existingPost.getPublishedAt() == null) {
+                existingPost.setPublishedAt(LocalDateTime.now());
+            } else if (nextStatus != Post.PostStatus.PUBLISHED) {
+                existingPost.setPublishedAt(null);
+            }
         }
 
         // 更新特色标记

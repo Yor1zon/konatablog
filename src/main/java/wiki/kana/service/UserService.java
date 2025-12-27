@@ -328,7 +328,7 @@ public class UserService {
         }
 
         // 检查用户是否激活
-        if (!user.getIsActive()) {
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
             throw new IllegalStateException("User account is deactivated");
         }
 

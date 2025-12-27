@@ -46,18 +46,8 @@ public class AuthController {
             // 认证用户
             User user = userService.authenticate(loginRequest.getUsername(), loginRequest.getPassword());
 
-            // 检查用户是否激活
-            if (!user.getIsActive()) {
-                log.warn("Inactive user attempted login: {}", loginRequest.getUsername());
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(CommonResponse.error("USER_INACTIVE", "用户账户已被禁用"));
-            }
-
             // 生成JWT Token
             String token = jwtTokenUtil.generateToken(user.getId(), user.getUsername(), user.getRole().name());
-
-            // 更新最后登录时间
-            userService.updateLastLoginTime(user.getId());
 
             // 构建用户信息响应
             LoginResponse.UserDto userDto = LoginResponse.UserDto.builder()
@@ -86,6 +76,10 @@ public class AuthController {
             log.warn("Login failed for user {}: {}", loginRequest.getUsername(), e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(CommonResponse.error("INVALID_CREDENTIALS", "用户名或密码错误"));
+        } catch (IllegalStateException e) {
+            log.warn("Inactive user attempted login: {}", loginRequest.getUsername());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(CommonResponse.error("USER_INACTIVE", "用户账户已被禁用"));
         } catch (Exception e) {
             log.error("Unexpected error during login for user: {}", loginRequest.getUsername(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -195,7 +189,7 @@ public class AuthController {
             String username = jwtTokenUtil.getUsernameFromToken(token);
             User user = userService.findByUsername(username);
 
-            if (!user.getIsActive()) {
+            if (!Boolean.TRUE.equals(user.getIsActive())) {
                 return ResponseEntity.ok(CommonResponse.success(false, "用户账户已被禁用"));
             }
 
@@ -239,7 +233,7 @@ public class AuthController {
             String role = jwtTokenUtil.getRoleFromToken(token);
 
             User user = userService.findById(userId);
-            if (!user.getIsActive()) {
+            if (!Boolean.TRUE.equals(user.getIsActive())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(CommonResponse.error("USER_INACTIVE", "用户账户已被禁用"));
             }
