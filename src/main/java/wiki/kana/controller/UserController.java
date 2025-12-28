@@ -8,12 +8,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import wiki.kana.dto.CommonResponse;
 import wiki.kana.dto.auth.UserProfileResponse;
+import wiki.kana.dto.user.UserAvatarSaveRequest;
+import wiki.kana.dto.user.UserAvatarSaveResponse;
 import wiki.kana.dto.user.UserUpdateRequest;
 import wiki.kana.entity.User;
 import wiki.kana.exception.DuplicateResourceException;
@@ -109,6 +112,40 @@ public class UserController {
         } catch (DuplicateResourceException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(CommonResponse.error("DUPLICATE_RESOURCE", e.getMessage()));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CommonResponse.error("USER_NOT_FOUND", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(CommonResponse.error("VALIDATION_ERROR", e.getMessage()));
+        }
+    }
+
+    /**
+     * 保存当前用户头像URL（用于 OSS 公共读直链）
+     */
+    @PostMapping("/me/avatar")
+    public ResponseEntity<CommonResponse<UserAvatarSaveResponse>> saveAvatar(
+            HttpServletRequest request,
+            @Valid @RequestBody UserAvatarSaveRequest avatarSaveRequest) {
+
+        String token = jwtTokenUtil.extractTokenFromHeader(request.getHeader("Authorization"));
+        if (token == null || !jwtTokenUtil.validateToken(token)) {
+            return unauthorizedResponse();
+        }
+
+        Long userId = jwtTokenUtil.getUserIdFromToken(token);
+        if (userId == null) {
+            return unauthorizedResponse();
+        }
+
+        try {
+            User updated = userService.updateAvatar(userId, avatarSaveRequest.getPublicUrl().trim());
+
+            UserAvatarSaveResponse response = UserAvatarSaveResponse.builder()
+                    .avatarUrl(updated.getAvatarUrl())
+                    .build();
+            return ResponseEntity.ok(CommonResponse.success(response, "头像已更新"));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CommonResponse.error("USER_NOT_FOUND", e.getMessage()));
