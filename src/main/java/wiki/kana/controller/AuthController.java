@@ -26,7 +26,6 @@ import java.util.Date;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", maxAge = 3600) // 允许跨域，生产环境建议配置具体域名
 public class AuthController {
 
     private final UserService userService;

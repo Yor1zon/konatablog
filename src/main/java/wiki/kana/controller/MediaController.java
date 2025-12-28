@@ -36,7 +36,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/media")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class MediaController {
 
     private static final long MAX_UPLOAD_SIZE = 5L * 1024 * 1024;

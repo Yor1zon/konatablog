@@ -36,7 +36,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/settings")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class SettingsController {
 
     private static final int MAX_AVATAR_SIZE = 5 * 1024 * 1024;
